@@ -314,3 +314,160 @@ function addRole() {
 			});
 	});
 }
+
+const updateEmployeeRole = () => {
+	let employees = [];
+	connection.query(
+		`SELECT id, first_name, last_name
+  FROM employee`,
+		(err, res) => {
+			if (err) throw err;
+
+			res.forEach((element) => {
+				employees.push(
+					`${element.id} ${element.first_name} ${element.last_name}`,
+				);
+			});
+
+			let job = [];
+			connection.query(`SELECT id, title FROM role`, (err, res) => {
+				if (err) throw err;
+
+				res.forEach((element) => {
+					job.push(`${element.id} ${element.title}`);
+				});
+
+				inquirer.prompt(prompt.updateRole(employees, job)).then((response) => {
+					let idCode = parseInt(response.update);
+					let roleCode = parseInt(response.role);
+					connection.query(
+						`UPDATE employee SET role_id = ${roleCode} WHERE id = ${idCode}`,
+						(err, res) => {
+							if (err) throw err;
+
+							console.log(
+								"\n" + "\n" + res.affectedRows + " Updated successfully!",
+							);
+							firstPrompt();
+						},
+					);
+				});
+			});
+		},
+	);
+};
+
+const updateEmployeeManager = () => {
+	let employees = [];
+	connection.query(
+		`SELECT id, first_name, last_name
+  FROM employee`,
+		(err, res) => {
+			res.forEach((element) => {
+				employees.push(
+					`${element.id} ${element.first_name} ${element.last_name}`,
+				);
+			});
+			inquirer.prompt(prompt.updateManager(employees)).then((answer) => {
+				let idCode = parseInt(answer.update);
+				let managerCode = parseInt(answer.manager);
+				connection.query(
+					`UPDATE employee SET manager_id = ${managerCode} WHERE id = ${idCode}`,
+					(err, res) => {
+						if (err) throw err;
+
+						console.log(
+							"\n" + "\n" + res.affectedRows + " Updated successfully!",
+						);
+						firstPrompt();
+					},
+				);
+			});
+		},
+	);
+};
+
+function deleteEmployee() {
+	console.log("Deleting an employee");
+
+	var query = `SELECT e.id, e.first_name, e.last_name
+      FROM employee e`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		const deleteEmployeeChoices = res.map(({ id, first_name, last_name }) => ({
+			value: id,
+			name: `${id} ${first_name} ${last_name}`,
+		}));
+
+		inquirer
+			.prompt(prompt.deleteEmployeePrompt(deleteEmployeeChoices))
+			.then(function (answer) {
+				var query = `DELETE FROM employee WHERE ?`;
+				connection.query(query, { id: answer.employeeId }, function (err, res) {
+					if (err) throw err;
+
+					console.log("\n" + res.affectedRows + "  employee deleted");
+
+					firstPrompt();
+				});
+			});
+	});
+}
+
+function deleteDepartment() {
+	console.log("\nRemove a Department:\n");
+
+	var query = `SELECT e.id, e.name FROM department e`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		const deleteDepartmentChoices = res.map(({ id, name }) => ({
+			value: id,
+			name: `${id} ${name}`,
+		}));
+
+		inquirer
+			.prompt(prompt.deleteDepartmentPrompt(deleteDepartmentChoices))
+			.then(function (answer) {
+				var query = `DELETE FROM department WHERE ?`;
+				connection.query(query, { id: answer.departmentId }, function (
+					err,
+					res,
+				) {
+					if (err) throw err;
+
+					console.log("\n" + res.affectedRows + " department deleted");
+
+					viewDepartments();
+				});
+			});
+	});
+}
+
+function deleteRole() {
+	console.log("Deleting a role");
+
+	var query = `SELECT e.id, e.title, e.salary, e.department_id FROM role e`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		const deleteRoleChoices = res.map(({ id, title }) => ({
+			value: id,
+			name: `${id} ${title}`,
+		}));
+
+		inquirer
+			.prompt(prompt.deleteRolePrompt(deleteRoleChoices))
+			.then(function (answer) {
+				var query = `DELETE FROM role WHERE ?`;
+				connection.query(query, { id: answer.roleId }, function (err, res) {
+					if (err) throw err;
+
+					console.log("\n" + res.affectedRows + " role deleted");
+
+					viewRoles();
+				});
+			});
+	});
+}
