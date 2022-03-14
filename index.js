@@ -178,3 +178,139 @@ function viewDepartments() {
 		firstPrompt();
 	});
 }
+
+function viewRoles() {
+	var query = "SELECT * FROM role";
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		console.log(`\nROLES:\n`);
+		res.forEach((role) => {
+			console.log(
+				`ID: ${role.id} | Title: ${role.title}\n Salary: ${role.salary}\n`,
+			);
+		});
+		firstPrompt();
+	});
+}
+
+function viewDepartmentBudget() {
+	var query = `SELECT d.name, 
+		r.salary, sum(r.salary) AS budget
+		FROM employee e 
+		LEFT JOIN role r ON e.role_id = r.id
+		LEFT JOIN department d ON r.department_id = d.id
+		group by d.name`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+
+		console.log(`\nDEPARTMENT BUDGETS:\n`);
+		res.forEach((department) => {
+			console.log(
+				`Department: ${department.name}\n Budget: ${department.budget}\n`,
+			);
+		});
+		firstPrompt();
+	});
+}
+
+const addEmployee = () => {
+	let departmentArray = [];
+	connection.query(`SELECT * FROM department`, (err, res) => {
+		if (err) throw err;
+
+		res.forEach((element) => {
+			departmentArray.push(`${element.id} ${element.name}`);
+		});
+		let roleArray = [];
+		connection.query(`SELECT id, title FROM role`, (err, res) => {
+			if (err) throw err;
+
+			res.forEach((element) => {
+				roleArray.push(`${element.id} ${element.title}`);
+			});
+			let managerArray = [];
+			connection.query(
+				`SELECT id, first_name, last_name FROM employee`,
+				(err, res) => {
+					if (err) throw err;
+					res.forEach((element) => {
+						managerArray.push(
+							`${element.id} ${element.first_name} ${element.last_name}`,
+						);
+					});
+					inquirer
+						.prompt(
+							prompt.insertEmployee(departmentArray, roleArray, managerArray),
+						)
+						.then((response) => {
+							let roleCode = parseInt(response.role);
+							let managerCode = parseInt(response.manager);
+							connection.query(
+								"INSERT INTO employee SET ?",
+								{
+									first_name: response.firstName,
+									last_name: response.lastName,
+									role_id: roleCode,
+									manager_id: managerCode,
+								},
+								(err, res) => {
+									if (err) throw err;
+									console.log("\n" + res.affectedRows + " employee created");
+									console.log(
+									);
+									viewEmployee();
+								},
+							);
+						});
+				},
+			);
+		});
+	});
+};
+
+function addDepartment() {
+	inquirer.prompt(prompt.insertDepartment).then(function (answer) {
+		var query = "INSERT INTO department (name) VALUES ( ? )";
+		connection.query(query, answer.department, function (err, res) {
+			if (err) throw err;
+			console.log(
+				`You have added this department: ${answer.department.toUpperCase()}.`,
+			);
+		});
+		viewDepartments();
+	});
+}
+
+function addRole() {
+	var query = `SELECT * FROM department`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		const departmentChoices = res.map(({ id, name }) => ({
+			value: id,
+			name: `${id} ${name}`,
+		}));
+
+		inquirer
+			.prompt(prompt.insertRole(departmentChoices))
+			.then(function (answer) {
+				var query = `INSERT INTO role SET ?`;
+				connection.query(
+					query,
+					{
+						title: answer.roleTitle,
+						salary: answer.roleSalary,
+						department_id: answer.departmentId,
+					},
+					function (err, res) {
+						if (err) throw err;
+
+						console.log("\n" + res.affectedRows + " role created");
+
+						viewRoles();
+					},
+				);
+			});
+	});
+}
